@@ -16,7 +16,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 APP_NAME="CloakBrowser Manager"
-VERSION="$(git describe --tags --always 2>/dev/null || echo dev)"
+VERSION="${CB_VERSION:-$(git describe --tags --always 2>/dev/null || echo dev)}"
 DIST="$ROOT/dist_native"
 BUILD="$ROOT/build_native"
 BUILD_VENV="${PACKAGING_VENV:-$ROOT/.venv-build}"

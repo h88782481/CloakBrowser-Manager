@@ -166,7 +166,7 @@ export function setOnUnauthorized(cb: (() => void) | null) {
   _onUnauthorized = cb;
 }
 
-async function request<T>(
+export async function request<T>(
   path: string,
   options?: RequestInit,
 ): Promise<T> {

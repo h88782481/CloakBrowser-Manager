@@ -42,6 +42,10 @@ version_file = ROOT / "backend" / "version.txt"
 if version_file.exists():
     datas.append((str(version_file), "backend"))
 
+mihomo_bin = ROOT / "bin" / ("mihomo.exe" if IS_WIN else "mihomo")
+if mihomo_bin.is_file():
+    binaries.append((str(mihomo_bin), "bin"))
+
 # Our own backend package (main.py lazy-imports several cloakbrowser modules).
 hiddenimports += collect_submodules("backend")
 

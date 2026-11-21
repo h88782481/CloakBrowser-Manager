@@ -44,12 +44,10 @@ from . import database as db
 from cloakbrowser.license import CloakBrowserLicenseError
 
 from .browser_manager import (
-    BrowserManager,
     ProfileBusyError,
     SCREENSHOT_FILENAME,
     is_seat_limit_error,
     license_error_detail,
-    test_proxy,
 )
 from .models import (
     ArtifactResponse,
@@ -73,6 +71,7 @@ from .models import (
 )
 from .runtime import bundle_dir
 from .settings_store import load_settings, save_settings
+from .proxy import PoolBrowserManager, init_pool, register_pool, validate_reference
 
 logger = logging.getLogger("cloakbrowser.manager")
 
@@ -295,7 +294,7 @@ class AuthMiddleware:
 
 
 # Singleton browser manager
-browser_mgr = BrowserManager(license_key=LICENSE_KEY, release_channel=RELEASE_CHANNEL)
+browser_mgr = PoolBrowserManager(license_key=LICENSE_KEY, release_channel=RELEASE_CHANNEL)
 
 # Frontend build directory (React production build). bundle_dir() resolves to
 # the PyInstaller extraction root when frozen, else the manager repo root.
@@ -572,6 +571,7 @@ def _filter_rfb_client_messages(data: bytes) -> bytes:
 async def lifespan(app: FastAPI):
     browser_mgr.vnc.validate_available()
     db.init_db()
+    init_pool()
     # Repair pass. A crash leaves bytes with no row, and the file-chooser view out of step
     # with the database. The bookmarks file is rebuilt once at the end rather than once per
     # profile, since each rebuild reads the whole profile list.
@@ -599,6 +599,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="CloakBrowser Manager", lifespan=lifespan)
 app.add_middleware(AuthMiddleware)
+register_pool(app, browser_mgr)
 
 
 # ── Authentication ────────────────────────────────────────────────────────────
@@ -667,7 +668,7 @@ async def list_profiles():
 async def test_proxy_endpoint(req: ProxyTestRequest):
     """Connect through a proxy and report exit IP + geo + latency."""
     try:
-        return await test_proxy(req.proxy)
+        return await browser_mgr.test_proxy(req.proxy)
     except ValueError as exc:  # bad proxy format from _validate_proxy
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -675,6 +676,7 @@ async def test_proxy_endpoint(req: ProxyTestRequest):
 @app.post("/api/profiles", response_model=ProfileResponse, status_code=201)
 async def create_profile(req: ProfileCreate):
     data = req.model_dump()
+    validate_reference(req.proxy)
     tags = data.pop("tags", None)
     if tags:
         data["tags"] = [t.model_dump() if hasattr(t, "model_dump") else t for t in tags]
@@ -701,6 +703,7 @@ async def get_profile(profile_id: str):
 async def update_profile(profile_id: str, req: ProfileUpdate):
     # Only pass fields that were explicitly set
     data = req.model_dump(exclude_unset=True)
+    validate_reference(req.proxy)
     tags = data.pop("tags", None)
     if tags is not None:
         data["tags"] = [t.model_dump() if hasattr(t, "model_dump") else t for t in tags]

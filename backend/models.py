@@ -219,7 +219,7 @@ class ClipboardRequest(BaseModel):
 
 class ProxyTestRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    proxy: str = Field(min_length=1, max_length=512)
+    proxy: str = Field(min_length=1, max_length=4096)
 
 
 class ProxyTestResponse(BaseModel):

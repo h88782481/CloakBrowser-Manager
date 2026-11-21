@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Lock, PanelLeftClose, PanelLeft, Settings, Power } from "lucide-react";
+import { Lock, PanelLeftClose, PanelLeft, Settings, Power, Globe } from "lucide-react";
 import { useProfiles } from "./hooks/useProfiles";
 import { api, ApiError, setOnUnauthorized, type ProfileCreateData, type SystemStatus, type UpdateInfo, type LaunchDenial, type RuntimeConfig } from "./lib/api";
 import { ProfileList } from "./components/ProfileList";
@@ -12,6 +12,7 @@ import { SystemStatusBadge } from "./components/SystemStatusBadge";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { LaunchErrorBanner } from "./components/LaunchErrorBanner";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { ProxyWorkspace, POOL_OPEN } from "./proxy";
 import { LoginPage } from "./components/LoginPage";
 
 type AuthState = "checking" | "required" | "ok" | "error";
@@ -107,6 +108,7 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
   const [updateDismissed, setUpdateDismissed] = useState(false);
   const [launchError, setLaunchError] = useState<LaunchDenial | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [transitOpen, setTransitOpen] = useState(false);
   const [stopped, setStopped] = useState(false);
   const [runtimeConfig, setRuntimeConfig] = useState<RuntimeConfig>(DEFAULT_RUNTIME_CONFIG);
 
@@ -125,6 +127,12 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
   useEffect(() => {
     api.getStatus().then(setSystemStatus).catch(() => setSystemStatus(null));
     api.checkUpdate().then(setUpdateInfo).catch(() => setUpdateInfo(null));
+  }, []);
+
+  useEffect(() => {
+    const open = () => setTransitOpen(true);
+    window.addEventListener(POOL_OPEN, open);
+    return () => window.removeEventListener(POOL_OPEN, open);
   }, []);
 
   useEffect(() => {
@@ -293,8 +301,14 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
           <ProfileList
             profiles={profiles}
             selectedId={selectedId}
-            onSelect={handleSelect}
-            onNew={handleNew}
+            onSelect={(id) => {
+              setTransitOpen(false);
+              handleSelect(id);
+            }}
+            onNew={() => {
+              setTransitOpen(false);
+              handleNew();
+            }}
             onReorder={reorder}
           />
         </div>
@@ -321,6 +335,17 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
           </div>
           <div className="flex items-center gap-3">
             <SystemStatusBadge status={systemStatus} />
+            <button
+              onClick={() => setTransitOpen((v) => !v)}
+              className={`p-1 rounded transition-colors ${
+                transitOpen
+                  ? "text-accent bg-accent/15"
+                  : "text-gray-500 hover:text-gray-300"
+              }`}
+              title="Proxy pool"
+            >
+              <Globe className="h-4 w-4" />
+            </button>
             <button
               onClick={() => setSettingsOpen(true)}
               className="text-gray-500 hover:text-gray-300 p-1"
@@ -364,6 +389,10 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto overscroll-contain">
+          {transitOpen && (
+            <ProxyWorkspace onClose={() => setTransitOpen(false)} />
+          )}
+          <div className={transitOpen ? "hidden" : "h-full"}>
           {view === "empty" &&
             ((systemStatus?.license_tier ?? "none") === "none" ? (
               <div className="flex items-center justify-center h-full px-6">
@@ -454,6 +483,7 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
               />
             )
           )}
+          </div>
         </div>
       </div>
       </div>

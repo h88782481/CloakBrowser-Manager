@@ -42,6 +42,14 @@ RUN wget -q https://github.com/kasmtech/KasmVNC/releases/download/v1.3.3/kasmvnc
     && rm kasmvncserver_bookworm_1.3.3_${TARGETARCH}.deb \
     && rm -rf /var/lib/apt/lists/*
 
+# Install mihomo proxy kernel (amd64 compatible / arm64)
+ARG MIHOMO_VERSION=v1.19.34
+RUN MIHOMO_ASSET=$([ "$TARGETARCH" = "amd64" ] && echo "mihomo-linux-amd64-compatible-${MIHOMO_VERSION}.gz" || echo "mihomo-linux-${TARGETARCH}-${MIHOMO_VERSION}.gz") \
+    && wget -q "https://github.com/MetaCubeX/mihomo/releases/download/${MIHOMO_VERSION}/${MIHOMO_ASSET}" -O /tmp/mihomo.gz \
+    && gzip -dc /tmp/mihomo.gz > /usr/local/bin/mihomo \
+    && chmod +x /usr/local/bin/mihomo \
+    && rm /tmp/mihomo.gz
+
 WORKDIR /app
 
 # Python deps
