@@ -9,6 +9,7 @@ pkill -f 'Xvnc :[0-9]' 2>/dev/null || true
 pkill -f 'cloakbrowser.*chrome' 2>/dev/null || true
 pkill -f 'chromium.*fingerprint' 2>/dev/null || true
 pkill -f xclip 2>/dev/null || true
+pkill -f 'mihomo.*-d' 2>/dev/null || true
 
 # Clean Chrome lock files left on the persistent volume
 find /data/profiles -maxdepth 2 -name 'SingletonLock' -delete 2>/dev/null || true

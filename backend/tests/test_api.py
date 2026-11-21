@@ -41,11 +41,17 @@ def test_create_profile(app_client: TestClient):
     assert len(data["id"]) == 36  # UUID
 
 
+def _saved_proxy(client: TestClient) -> str:
+    assert client.post("/api/proxy-pool/homes", json={"lines": "http://host:8080"}).is_success
+    home = client.get("/api/proxy-pool").json()["homes"][0]
+    return f"pool:{home['id']}:"
+
+
 def test_create_profile_with_all_fields(app_client: TestClient):
     resp = app_client.post("/api/profiles", json={
         "name": "Full",
         "fingerprint_seed": 42,
-        "proxy": "http://host:8080",
+        "proxy": _saved_proxy(app_client),
         "gpu_family": "nvidia",
         "screen_width": 2560,
         "screen_height": 1440,
@@ -969,8 +975,9 @@ def test_duplicate_profile_not_found(app_client: TestClient):
 
 
 def test_duplicate_profile_is_config_only_by_default(app_client: TestClient):
+    proxy = _saved_proxy(app_client)
     create = app_client.post(
-        "/api/profiles", json={"name": "Src", "fingerprint_seed": 4242, "proxy": "http://host:8080"}
+        "/api/profiles", json={"name": "Src", "fingerprint_seed": 4242, "proxy": proxy}
     )
     src = create.json()
     _seed_browser_state(Path(src["user_data_dir"]))
@@ -981,7 +988,7 @@ def test_duplicate_profile_is_config_only_by_default(app_client: TestClient):
     assert clone["id"] != src["id"]
     assert clone["name"] == "Src (copy)"
     assert clone["fingerprint_seed"] == 4242
-    assert clone["proxy"] == "http://host:8080"
+    assert clone["proxy"] == proxy
     assert clone["user_data_dir"] != src["user_data_dir"]
     # No browser state travels with a config-only clone
     assert not Path(clone["user_data_dir"]).exists()

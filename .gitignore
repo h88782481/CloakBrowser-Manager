@@ -7,6 +7,7 @@ __pycache__/
 # Node
 node_modules/
 frontend/dist/
+*.tsbuildinfo
 
 # Native packaging build output
 dist_native/
@@ -23,6 +24,8 @@ dist_arm/
 
 # Secrets (license key, auth token) — keep .env.example, never .env
 .env
+transits.txt
+bin/
 
 # Deploy
 deploy.sh
